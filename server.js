@@ -1,3 +1,4 @@
+require('dotenv').config();
 const dns2 = require("dns2");
 const { Packet } = dns2;
 const lookup = require("./lookup.js");
@@ -7,7 +8,7 @@ const server = dns2.createServer({
   handle: async (request, send, rinfo) => {
     const response = Packet.createResponseFromRequest(request);
     const [question] = request.questions;
-    //console.log({question});
+    console.log({question});
     const { name } = question;
     let outname = name.split(".");
     outname.pop();
@@ -15,34 +16,15 @@ const server = dns2.createServer({
     const start = new Date().getTime();
     let pendingLookup = pending[name];
     if (!pendingLookup) {
-      pendingLookup = lookup(outname.join("."));
+      pendingLookup = lookup(outname.join(".").toLowerCase(), question.name.toLowerCase());
       pending[name] = pendingLookup;
     }
     let lookedup = await pendingLookup;
-    const { type } = lookedup;
     delete pending[name];
-    const spent = start - new Date().getTime();
-    const answer = {
-      name,
-      type,
-      class: Packet.CLASS.IN,
-      ttl: 3600,
-    };
-    if(lookedup.address) answer.address=lookedup.address;
-    if(lookedup.domain) answer.domain=lookedup.domain;
-    response.answers.push(answer);
-
-    console.log(response, start);
+    for(let answer of lookedup) response.answers.push(answer);
+    console.log({lookedup})
     send(response);
   },
-});
-
-server.on("request", (request, response, rinfo) => {
-  //console.log(request.header.id, request.questions[0]);
-});
-
-server.on("listening", () => {
-  //console.log(server.address());
 });
 
 server.on("close", () => {
@@ -53,5 +35,3 @@ server.listen({
   udp: 53,
 });
 
-// eventually
-//server.close();
