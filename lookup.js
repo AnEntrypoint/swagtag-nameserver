@@ -1,7 +1,6 @@
 const Web3 = require("web3");
-const web3 = new Web3("https://api.avax-test.network/ext/bc/C/rpc");
+const nets = [];
 const NodeCache = require("node-cache");
-const myCache = new NodeCache({ stdTTL: 60 * 60 * 10, checkperiod: 120 });
 const DHT = require("@hyperswarm/dht");
 const axios = require("axios");
 const base32 = require("hi-base32");
@@ -31,18 +30,23 @@ const ABI = [
     }
 ];
 
-const ips = {};
-const contract = new web3.eth.Contract(
-  ABI,
-  "0x30fd3f22BD652cE1339922D7701b3D35F13c4E46"
-);
-module.exports = async (input, question) => {
+module.exports = async (input, question, net, contract, tunnelhost, tunnelip) => {
+  console.log({net, contract})
   if(!input.length) return [];
-  const cache = myCache.get(input);
+  if(!net) return;
+  if(!nets[net]) {
+    nets[net] = [];
+    const web3 = nets[net].web3 = new Web3(net);
+    nets[net].contract = new web3.eth.Contract(ABI,contract);
+    nets[net].cache = new NodeCache({ stdTTL: 60 * 60 * 10, checkperiod: 120 });
+    nets[net].tunnelhost = tunnelhost;
+    nets[net].tunnelip = tunnelip;
+  }
+  const cache = nets[net].cache.get(question);
   if(cache) return cache;
-  console.log({input, question})
+    
   const tunnel = question.replace(input+'.', '');
-
+  console.log({input});
   //check if tunnel subdomain
   let publicKey = '';
   try {publicKey = Buffer.from(base32.decode.asBytes(input.toUpperCase()))} catch(e) {}
@@ -51,28 +55,28 @@ module.exports = async (input, question) => {
       {
         type: Packet.TYPE.A,
         name: question,
-        address:process.env.tunnelip,
+        address:nets[net].tunnelip,
         class: Packet.CLASS.IN,
         ttl: 3600
       }
     ];
   }
   //check if acme challenge
-  if(input == '_acme-challenge') {
-      const data = await axios.get('http://txt.'+tunnel);
-      console.log(data.data);
+  if(input.startsWith('_acme-challenge')) {
+      const data = (await axios.get('http://txt.'+tunnel)).data.trim().replace(/\n/g,'');
+      console.log({data});
       return [
         {
           type: Packet.TYPE.TXT,
           name: question,
-          data:data.data,
+          data,
           class: Packet.CLASS.IN,
           ttl: 3600
         }
       ]
   }
   try {
-    let config = await contract.methods.getAddress(input).call();
+    let config = await nets[net].contract.methods.getAddress(input).call();
     console.log({config})
     const types = [
       function cname() {
@@ -112,7 +116,7 @@ module.exports = async (input, question) => {
         if (config.startsWith("tun:")) {
           let addressout = config.split(':');
           const hash = addressout.pop();
-          const domain = hash+'.'+tunnel;
+          const domain = hash+'.'+nets[net].tunnelhost;
           return [
             {
               type:Packet.TYPE.CNAME,
@@ -124,7 +128,7 @@ module.exports = async (input, question) => {
             {
               type:Packet.TYPE.A,
               name:domain,
-              address:process.env.tunnelip,
+              address:nets[net].tunnelip,
               class: Packet.CLASS.IN,
               ttl: 3600
             }
@@ -139,7 +143,7 @@ module.exports = async (input, question) => {
           noiseSocket.on("close", function () {
             console.log("Client closed...");
           });
-          return new Promise((done) => {
+          return new mise((done) => {
             noiseSocket.on("data", function (data) {
               const res = JSON.parse(data);
               console.log('ddns found host', res.host);
@@ -175,7 +179,7 @@ module.exports = async (input, question) => {
       const handled = handler();
       console.log({handled});
       if(handled) {
-        myCache.set(input, config);
+        nets[net].cache.set(input, handled);
         return(handled);
       }
     }
