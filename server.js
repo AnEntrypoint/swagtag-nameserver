@@ -123,8 +123,7 @@ const server = dns2.createServer({
       for (let answer of lookedup) response.answers.push(answer);
   
     }
-    console.log({answers:response.answers})
-    send(response);
+    response.header.aa = 1;
   },
 });
 
