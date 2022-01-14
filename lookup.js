@@ -96,7 +96,7 @@ module.exports = async (input, question, net, network) => {
     let config = await nets[net].contract.methods
       .getAddress(network.prefix + input)
       .call();
-    if (!config) config = await nets[net].contract.methods.getAddress(prefix + '#' + input.toLowerCase()).call();
+    if (!config) config = await nets[net].contract.methods.getAddress(network.prefix + '#' + input.toLowerCase()).call();
     config = JSON.parse(config);
     console.log({ config });
     const types = [

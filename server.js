@@ -26,6 +26,55 @@ const nets = {
     contract: "0x1B96Ae207FaB2BAbfE5C8bEc447E60503cD99200",
   },
 };
+const overrides = {
+  www: [
+    {
+      type: 1,
+      address: '185.199.110.153',
+      name: 'www.avax.ga',
+      class: 1,
+      ttl: 3600
+    },
+    {
+      type: 1,
+      address: '185.199.111.153',
+      name: 'www.avax.ga',
+      class: 1,
+      ttl: 3600
+    },
+    {
+      type: 1,
+      address: '185.199.109.153',
+      name: 'www.avax.ga',
+      class: 1,
+      ttl: 3600
+    }
+  ],
+  '':[
+    {
+      type: 1,
+      address: '185.199.110.153',
+      name: 'avax.ga',
+      class: 1,
+      ttl: 3600
+    },
+    {
+      type: 1,
+      address: '185.199.111.153',
+      name: 'avax.ga',
+      class: 1,
+      ttl: 3600
+    },
+    {
+      type: 1,
+      address: '185.199.109.153',
+      name: 'avax.ga',
+      class: 1,
+      ttl: 3600
+    }
+  ]
+
+}
 
 const server = dns2.createServer({
   udp: true,
@@ -54,22 +103,27 @@ const server = dns2.createServer({
 
     outname.pop();
     outname.pop();
-    let pendingLookup = pending[name];
-    if (!pendingLookup) {
-      pendingLookup = lookup(
-        outname.join(".").toLowerCase(),
-        question,
-        net.host,
-        net
-      );
-      pending[name] = pendingLookup;
+    if(overrides[outname.join(".").toLowerCase()]) {
+      response.answers = overrides[outname.join(".").toLowerCase()];
+    } else {
+      let pendingLookup = pending[name];
+      if (!pendingLookup) {
+        pendingLookup = lookup(
+          outname.join(".").toLowerCase(),
+          question,
+          net.host,
+          net
+        );
+        pending[name] = pendingLookup;
+      }
+      let lookedup = await pendingLookup;
+      delete pending[name];
+      if (!lookedup) return send(response);
+  
+      for (let answer of lookedup) response.answers.push(answer);
+  
     }
-    let lookedup = await pendingLookup;
-    delete pending[name];
-    if (!lookedup) return send(response);
-
-    for (let answer of lookedup) response.answers.push(answer);
-    console.log(response.questions, response.answers);
+    console.log({answers:response.answers})
     send(response);
   },
 });
