@@ -33,7 +33,7 @@ const ABI = [
 module.exports = async (input, question, net, network) => {
   const { contract, tunnelhost, tunnelip } = network;
   console.log("LOOKING UP")
-  console.log({net});
+  console.log({ net });
   if (typeof input != 'string') return [];
   if (!net) return;
   if (!nets[net]) {
@@ -54,7 +54,7 @@ module.exports = async (input, question, net, network) => {
   let publicKey = "";
   try {
     publicKey = Buffer.from(base32.decode.asBytes(input.toUpperCase()));
-  } catch (e) {}
+  } catch (e) { }
   if (
     publicKey.length == 32 ||
     input == "txt" ||
@@ -73,7 +73,7 @@ module.exports = async (input, question, net, network) => {
   }
   //check if acme challenge
   console.log('is', question);
-  if (input.startsWith("_acme-challenge") || question.type==16) {
+  if (input.startsWith("_acme-challenge") || question.type == 16) {
     console.log("TXT", tunnel);
     const tunnelhost = nets[net].tunnelhost;
 
@@ -96,13 +96,12 @@ module.exports = async (input, question, net, network) => {
     let config = await nets[net].contract.methods
       .getAddress(network.prefix + input)
       .call();
-    if (!config)
-      config = await nets[net].contract.methods.getAddress(input).call();
+    if (!config) config = await nets[net].contract.methods.getAddress(prefix + '#' + input.toLowerCase()).call();
     config = JSON.parse(config);
-    console.log({config});
+    console.log({ config });
     const types = [
       function cname() {
-        if(!config.cname) return;
+        if (!config.cname) return;
         const domain = config.cname;
         const ips = config.ips;
         const out = [
@@ -134,7 +133,7 @@ module.exports = async (input, question, net, network) => {
         return out;
       },
       function tunnel() {
-        if(!config.tunnel) return;
+        if (!config.tunnel) return;
         const hash = config.tunnel;
         const domain = hash + "." + nets[net].tunnelhost;
         return [
@@ -155,7 +154,7 @@ module.exports = async (input, question, net, network) => {
         ];
       },
       function ddns() {
-        if(!config.ddns) return;
+        if (!config.ddns) return;
         const hash = config.ddns;
         const publicKey = Buffer.from(
           base32.decode.asBytes(hash.toUpperCase())
