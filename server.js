@@ -9,25 +9,25 @@ const nets = {
     tunnelhost: "fuji.avax.ga",
     prefix: "https://domains.fuji.avax.ga/",
     host: "https://api.avax-test.network/ext/bc/C/rpc",
-    contract: "0x30fd3f22BD652cE1339922D7701b3D35F13c4E46",
+    contract: "0xA133510258B8fdf5CcFe7d26aBFeF2D0f93497Bb",
   },
   fuji: {
     tunnelip: "129.213.57.168",
     tunnelhost: "fuji.avax.ga",
     prefix: "https://domains.fuji.avax.ga/",
     host: "https://api.avax-test.network/ext/bc/C/rpc",
-    contract: "0x30fd3f22BD652cE1339922D7701b3D35F13c4E46",
+    contract: "0xA133510258B8fdf5CcFe7d26aBFeF2D0f93497Bb",
   },
   avax: {
     tunnelip: "129.213.57.168",
     tunnelhost: "avax.ga",
     prefix: "https://domains.avax.ga/",
     host: "https://api.avax.network/ext/bc/C/rpc",
-    contract: "0x1B96Ae207FaB2BAbfE5C8bEc447E60503cD99200",
+    contract: "0xDD890F9a3DFE140f370DFD510429714d28Fcf288",
   },
 };
 const overrides = {
-  www: [
+  'www.avax.ga': [
     {
       type: 1,
       address: '185.199.110.153',
@@ -50,7 +50,7 @@ const overrides = {
       ttl: 3600
     }
   ],
-  '':[
+  'avax.ga':[
     {
       type: 1,
       address: '185.199.110.153',
@@ -69,6 +69,15 @@ const overrides = {
       type: 1,
       address: '185.199.109.153',
       name: 'avax.ga',
+      class: 1,
+      ttl: 3600
+    }
+  ],
+  'www.fuji.avax.ga':[
+    {
+      type: 1,
+      address: '129.213.57.168',
+      name: 'www.fuji.avax.ga',
       class: 1,
       ttl: 3600
     }
@@ -103,8 +112,8 @@ const server = dns2.createServer({
 
     outname.pop();
     outname.pop();
-    if(overrides[outname.join(".").toLowerCase()]) {
-      response.answers = overrides[outname.join(".").toLowerCase()];
+    if(overrides[question.name.toLowerCase()]) {
+      response.answers = overrides[question.name.toLowerCase()];
     } else {
       let pendingLookup = pending[name];
       if (!pendingLookup) {
@@ -124,6 +133,7 @@ const server = dns2.createServer({
   
     }
     response.header.aa = 1;
+    send(response);
   },
 });
 
