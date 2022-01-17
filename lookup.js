@@ -32,8 +32,6 @@ const ABI = [
 
 module.exports = async (input, question, net, network) => {
   const { contract, tunnelhost, tunnelip } = network;
-  console.log("LOOKING UP")
-  console.log({ net });
   if (typeof input != 'string') return [];
   if (!net) return;
   if (!nets[net]) {
@@ -61,6 +59,7 @@ module.exports = async (input, question, net, network) => {
     input == "exists" ||
     input == "domains"
   ) {
+    console.log(publicKey.length)
     return [
       {
         type: Packet.TYPE.A,
@@ -93,14 +92,14 @@ module.exports = async (input, question, net, network) => {
     ];
   }
   try {
-    let config = await nets[net].contract.methods
-      .getAddress(network.prefix + input)
-      .call();
-    if (!config) config = await nets[net].contract.methods.getAddress(network.prefix + '#' + input.toLowerCase()).call();
+    console.log(input);
+    let config = await nets[net].contract.methods.getAddress(input.toLowerCase()).call();
+    console.log({config});
+    if(!config.length) return false;
     config = JSON.parse(config);
     console.log({ config });
-    const types = [
-      function cname() {
+    const types = {
+      cname:()=> {
         if (!config.cname) return;
         const domain = config.cname;
         const ips = config.ips;
@@ -132,8 +131,10 @@ module.exports = async (input, question, net, network) => {
         }
         return out;
       },
-      function tunnel() {
+      tunnel:()=> {
+        console.log("CHECKING TUNNEL");
         if (!config.tunnel) return;
+        console.log({publicKey});
         const hash = config.tunnel;
         const domain = hash + "." + nets[net].tunnelhost;
         return [
@@ -153,7 +154,7 @@ module.exports = async (input, question, net, network) => {
           },
         ];
       },
-      function ddns() {
+      ddns:()=> {
         if (!config.ddns) return;
         const hash = config.ddns;
         const publicKey = Buffer.from(
@@ -181,7 +182,7 @@ module.exports = async (input, question, net, network) => {
           });
         });
       },
-      function a() {
+      a:()=> {
         if (config.ips.length) {
           const ret = [];
           config.ips.forEach((address) =>
@@ -196,16 +197,12 @@ module.exports = async (input, question, net, network) => {
           return ret;
         }
       },
-    ];
+    };
     const out = [];
-    for (let handler of types) {
-      const handled = handler();
-      if (handled) {
-        console.log({ handled });
-        nets[net].cache.set(input, handled);
-        return handled;
-      }
-    }
+    
+    const handled = types[config.mode]();
+    nets[net].cache.set(input, handled);
+    return handled;
   } catch (e) {
     console.trace(e);
     return [];
