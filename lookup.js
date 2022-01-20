@@ -198,7 +198,6 @@ module.exports = async (input, question, net, network) => {
         }
       },
     };
-    const out = [];
     
     const handled = types[config.mode]();
     nets[net].cache.set(input, handled);
