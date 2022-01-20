@@ -23,7 +23,7 @@ const nets = {
     tunnelhost: "avax.ga",
     prefix: "https://domains.avax.ga/",
     host: "https://api.avax.network/ext/bc/C/rpc",
-    contract: "0xDD890F9a3DFE140f370DFD510429714d28Fcf288",
+    contract: "0xc290698f5E5CdbF881d804f68ceb5b76Ada383Be",
   },
 };
 const overrides = {
