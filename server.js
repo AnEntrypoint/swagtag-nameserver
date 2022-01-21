@@ -18,7 +18,7 @@ const nets = {
     host: "https://api.avax-test.network/ext/bc/C/rpc",
     contract: "0xA133510258B8fdf5CcFe7d26aBFeF2D0f93497Bb",
   },
-  avax: {
+  avax: {om
     tunnelip: "129.213.57.168",
     tunnelhost: "avax.ga",
     prefix: "https://domains.avax.ga/",
