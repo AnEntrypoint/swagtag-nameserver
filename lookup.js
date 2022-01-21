@@ -38,7 +38,7 @@ module.exports = async (input, question, net, network) => {
     nets[net] = [];
     const web3 = (nets[net].web3 = new Web3(net));
     nets[net].contract = new web3.eth.Contract(ABI, contract);
-    nets[net].cache = new NodeCache({ stdTTL: 60 * 60 * 10, checkperiod: 120 });
+    nets[net].cache = new NodeCache({ stdTTL: 60 * 10, checkperiod: 120 });
     nets[net].tunnelhost = tunnelhost;
     nets[net].tunnelip = tunnelip;
   }
@@ -97,7 +97,6 @@ module.exports = async (input, question, net, network) => {
     console.log({config});
     if(!config.length) return false;
     config = JSON.parse(config);
-    console.log({ config });
     const types = {
       cname:()=> {
         if (!config.cname) return;
