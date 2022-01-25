@@ -37,131 +37,127 @@ const nets = {
   },
 };
 const overrides = {
-  'www.avax.ga': [
+  "www.avax.ga": [
     {
       type: 1,
-      address: '185.199.110.153',
-      name: 'www.avax.ga',
+      address: "185.199.110.153",
+      name: "www.avax.ga",
       class: 1,
-      ttl: 3600
+      ttl: 3600,
     },
     {
       type: 1,
-      address: '185.199.111.153',
-      name: 'www.avax.ga',
+      address: "185.199.111.153",
+      name: "www.avax.ga",
       class: 1,
-      ttl: 3600
+      ttl: 3600,
     },
     {
       type: 1,
-      address: '185.199.109.153',
-      name: 'www.avax.ga',
+      address: "185.199.109.153",
+      name: "www.avax.ga",
       class: 1,
-      ttl: 3600
-    }
+      ttl: 3600,
+    },
   ],
-  'avax.ga':[
+  "avax.ga": [
     {
       type: 1,
-      address: '185.199.110.153',
-      name: 'avax.ga',
+      address: "185.199.110.153",
+      name: "avax.ga",
       class: 1,
-      ttl: 3600
+      ttl: 3600,
     },
     {
       type: 1,
-      address: '185.199.111.153',
-      name: 'avax.ga',
+      address: "185.199.111.153",
+      name: "avax.ga",
       class: 1,
-      ttl: 3600
+      ttl: 3600,
     },
     {
       type: 1,
-      address: '185.199.109.153',
-      name: 'avax.ga',
+      address: "185.199.109.153",
+      name: "avax.ga",
       class: 1,
-      ttl: 3600
-    }
+      ttl: 3600,
+    },
   ],
-  'www.fuji.avax.ga':[
+  "www.fuji.avax.ga": [
     {
       type: 1,
-      address: '129.213.57.168',
-      name: 'www.fuji.avax.ga',
+      address: "129.213.57.168",
+      name: "www.fuji.avax.ga",
       class: 1,
-      ttl: 3600
-    }
+      ttl: 3600,
+    },
   ],
-  'www.fujiavax.ga':[
+  "www.fujiavax.ga": [
     {
       type: 1,
-      address: '129.213.57.168',
-      name: 'www.fujiavax.ga',
+      address: "129.213.57.168",
+      name: "www.fujiavax.ga",
       class: 1,
-      ttl: 3600
-    }
-  ]
-
-}
+      ttl: 3600,
+    },
+  ],
+};
 
 const handle = async (request, send, rinfo) => {
-    const response = Packet.createResponseFromRequest(request);
-    const [question] = request.questions;
+  const response = Packet.createResponseFromRequest(request);
+  const [question] = request.questions;
 
-    const { name } = question;
-    let outname = name.split(".");
-    let net = nets["avax"];
+  const { name } = question;
+  let outname = name.split(".");
+  let net = nets["avax"];
 
-    if (
-      outname.length > 2 &&
-      Object.keys(nets).includes(outname[outname.length - 3])
-    ) {
-      net = nets[outname[outname.length - 3]];
-      outname.pop();
-    }
-    if (
-      outname.length > 1 &&
-      Object.keys(nets).includes(outname[outname.length - 2])
-    ) {
-      net = nets[outname[outname.length - 2]];
-    }
-
+  if (
+    outname.length > 2 &&
+    Object.keys(nets).includes(outname[outname.length - 3])
+  ) {
+    net = nets[outname[outname.length - 3]];
     outname.pop();
-    outname.pop();
-    outname = outname.pop();
-    if(overrides[question.name.toLowerCase()]) {
-      response.answers = overrides[question.name.toLowerCase()];
-    } else {
-      if(!outname) return send(response);
-      let pendingLookup = pending[name];
-      if (!pendingLookup) {
-        pendingLookup = lookup(
-          outname.toLowerCase(),
-          question,
-          net.host,
-          net
-        );
-        pending[name] = pendingLookup;
-      }
-      let lookedup = await pendingLookup;
-      delete pending[name];
-      if (!lookedup) return send(response);
-      if(lookedup.answers) for (let answer of lookedup.answers) response.answers.push(answer);
-      if(lookedup.authorities) for (let authority of lookedup.authorities) response.authorities.push(authority);
-      if(!lookedup.authorities) response.header.aa = 1;
-    }
-    console.log(JSON.stringify(response, null, 2));
-    send(response);
   }
-  
-  
+  if (
+    outname.length > 1 &&
+    Object.keys(nets).includes(outname[outname.length - 2])
+  ) {
+    net = nets[outname[outname.length - 2]];
+  }
+
+  outname.pop();
+  outname.pop();
+  outname = outname.pop();
+  if (overrides[question.name.toLowerCase()]) {
+    response.answers = overrides[question.name.toLowerCase()];
+  } else {
+    if (!outname) return send(response);
+    let pendingLookup = pending[name];
+    if (!pendingLookup) {
+      pendingLookup = lookup(outname.toLowerCase(), question, net.host, net);
+      pending[name] = pendingLookup;
+    }
+    let lookedup = await pendingLookup;
+    delete pending[name];
+    if (!lookedup) return send(response);
+    if (lookedup.answers)
+      for (let answer of lookedup.answers) response.answers.push(answer);
+    if (lookedup.authorities)
+      for (let authority of lookedup.authorities)
+        response.authorities.push(authority);
+    if (!lookedup.authorities) response.header.aa = 1;
+  }
+  console.log(JSON.stringify(response, null, 2));
+  send(response);
+};
+
 const server = dns2.createServer({
   udp: true,
   tcp: true,
-  doh : {
-    ssl  : false
+  doh: {
+    ssl: false,
   },
-  handle
+  handle,
 });
 
 server.on("close", () => {
