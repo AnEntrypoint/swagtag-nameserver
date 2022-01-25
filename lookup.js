@@ -32,7 +32,7 @@ const ABI = [
 
 module.exports = async (input, question, net, network) => {
   const { contract, tunnelhost, tunnelip } = network;
-  if (typeof input != 'string') return [];
+  if (typeof input != "string") return [];
   if (!net) return;
   if (!nets[net]) {
     nets[net] = [];
@@ -42,25 +42,23 @@ module.exports = async (input, question, net, network) => {
     nets[net].tunnelhost = tunnelhost;
     nets[net].tunnelip = tunnelip;
   }
-  const cache = nets[net].cache.get(question.name.toLowerCase());
-  console.log({ cache });
+  const cache = nets[net].cache.get(input);
   if (cache) return cache;
 
   const tunnel = question.name.toLowerCase().replace(input + ".", "");
-  console.log({ input });
   //check if tunnel subdomain
   let publicKey = "";
   try {
     publicKey = Buffer.from(base32.decode.asBytes(input.toUpperCase()));
-  } catch (e) { }
+  } catch (e) {}
   if (
     publicKey.length == 32 ||
-    input == "txt" ||
-    input == "exists" ||
-    input == "domains"
+    input === "txt" ||
+    input === "exists" ||
+    input === "domains" ||
+    input === "bumps"
   ) {
-    console.log(publicKey.length)
-    return [
+    return {answers:[
       {
         type: Packet.TYPE.A,
         name: question.name.toLowerCase(),
@@ -68,20 +66,16 @@ module.exports = async (input, question, net, network) => {
         class: Packet.CLASS.IN,
         ttl: 3600,
       },
-    ];
+    ]};
   }
   //check if acme challenge
-  console.log('is', question);
-  if (input.startsWith("_acme-challenge") || question.type == 16) {
-    console.log("TXT", tunnel);
+  if (question.type == 16) {
     const tunnelhost = nets[net].tunnelhost;
-
-
+    if (!question.name.endsWith(tunnelhost)) return;
     const data = (await axios.get("http://txt." + tunnelhost)).data
       .trim()
       .replace(/\n/g, "");
-    console.log({ data });
-    return [
+    return {answers:[
       {
         type: Packet.TYPE.TXT,
         name: question.name.toLowerCase(),
@@ -89,17 +83,17 @@ module.exports = async (input, question, net, network) => {
         class: Packet.CLASS.IN,
         ttl: 3600,
       },
-    ];
+    ]};
   }
   try {
-    console.log(input);
-    let config = await nets[net].contract.methods.getAddress(input.toLowerCase()).call();
-    console.log({config});
-    if(!config.length) return false;
+    let config = await nets[net].contract.methods
+      .getAddress(input.toLowerCase())
+      .call();
+    if (!config.length) return false;
     config = JSON.parse(config);
     const types = {
-      cname:()=> {
-        if (!config.cname) return;
+      cname: () => {
+        if (config.mode !== "cname") return;
         const domain = config.cname;
         const ips = config.ips;
         const out = [
@@ -110,14 +104,17 @@ module.exports = async (input, question, net, network) => {
             class: Packet.CLASS.IN,
             ttl: 3600,
           },
-          {
+          
+        ];
+        if(ips.length) {
+          out.push({
             type: Packet.TYPE.CNAME,
             name: domain,
             domain: "cname-server",
             class: Packet.CLASS.IN,
             ttl: 3600,
-          },
-        ];
+          });
+        }
 
         for (let ip of ips) {
           out.push({
@@ -128,33 +125,33 @@ module.exports = async (input, question, net, network) => {
             ttl: 3600,
           });
         }
-        return out;
+        return { answers: out };
       },
-      tunnel:()=> {
-        console.log("CHECKING TUNNEL");
-        if (!config.tunnel) return;
-        console.log({publicKey});
+      tunnel: () => {
+        if (config.mode !== "tunnel") return;
         const hash = config.tunnel;
         const domain = hash + "." + nets[net].tunnelhost;
-        return [
-          {
-            type: Packet.TYPE.CNAME,
-            name: question.name.toLowerCase(),
-            domain,
-            class: Packet.CLASS.IN,
-            ttl: 3600,
-          },
-          {
-            type: Packet.TYPE.A,
-            name: domain,
-            address: nets[net].tunnelip,
-            class: Packet.CLASS.IN,
-            ttl: 3600,
-          },
-        ];
+        return {
+          answers: [
+            {
+              type: Packet.TYPE.CNAME,
+              name: question.name.toLowerCase(),
+              domain,
+              class: Packet.CLASS.IN,
+              ttl: 3600,
+            },
+            {
+              type: Packet.TYPE.A,
+              name: domain,
+              address: nets[net].tunnelip,
+              class: Packet.CLASS.IN,
+              ttl: 3600,
+            },
+          ],
+        };
       },
-      ddns:()=> {
-        if (!config.ddns) return;
+      ddns: () => {
+        if (config.mode !== "ddns") return;
         const hash = config.ddns;
         const publicKey = Buffer.from(
           base32.decode.asBytes(hash.toUpperCase())
@@ -166,7 +163,6 @@ module.exports = async (input, question, net, network) => {
         return new Promise((done) => {
           noiseSocket.on("data", function (data) {
             const res = JSON.parse(data);
-            console.log("ddns found host", res.host);
             noiseSocket.end();
             const out = [
               {
@@ -177,11 +173,31 @@ module.exports = async (input, question, net, network) => {
                 ttl: 3600,
               },
             ];
-            done(out);
+            done({ answers: out });
           });
         });
       },
-      a:()=> {
+      ns: () => {
+        if (config.mode !== "ns") return;
+        if (config.ns.length) {
+          const ret = [];
+          console.log(config.ns, config.ips);
+          for (let index = 0; index < config.ns.length; index++) {
+            if (!config.ns[index]) continue;
+            ret.push({
+              type: Packet.TYPE.NS,
+              ns: config.ns[index],
+              name: question.name.toLowerCase(),
+              class: Packet.CLASS.IN,
+              ttl: 3600,
+            });
+          }
+          console.log({ret})
+          return { authorities: ret };
+        }
+      },
+      a: () => {
+        if (config.mode !== "a") return;
         if (config.ips.length) {
           const ret = [];
           config.ips.forEach((address) =>
@@ -193,11 +209,11 @@ module.exports = async (input, question, net, network) => {
               ttl: 3600,
             })
           );
-          return ret;
+          return { answers: ret };
         }
       },
     };
-    
+
     const handled = types[config.mode]();
     nets[net].cache.set(input, handled);
     return handled;
