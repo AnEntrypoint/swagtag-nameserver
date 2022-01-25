@@ -42,8 +42,6 @@ module.exports = async (input, question, net, network) => {
     nets[net].tunnelhost = tunnelhost;
     nets[net].tunnelip = tunnelip;
   }
-  const cache = nets[net].cache.get(input);
-  if (cache) return cache;
 
   const tunnel = question.name.toLowerCase().replace(input + ".", "");
   //check if tunnel subdomain
@@ -68,10 +66,14 @@ module.exports = async (input, question, net, network) => {
       },
     ]};
   }
+  const cache = nets[net].cache.get(input);
+  if (cache) return cache;
+
   //check if acme challenge
   if (question.type == 16) {
+    console.log({question});
     const tunnelhost = nets[net].tunnelhost;
-    if (!question.name.endsWith(tunnelhost)) return;
+    if (!question.name.toLowerCase().endsWith(tunnelhost)) return;
     const data = (await axios.get("http://txt." + tunnelhost)).data
       .trim()
       .replace(/\n/g, "");
@@ -81,7 +83,7 @@ module.exports = async (input, question, net, network) => {
         name: question.name.toLowerCase(),
         data,
         class: Packet.CLASS.IN,
-        ttl: 3600,
+        ttl: 1,
       },
     ]};
   }
