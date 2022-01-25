@@ -6,21 +6,8 @@ const path = require("path");
 const { Packet } = dns2;
 const lookup = require("./lookup.js");
 const pending = {};
+
 const nets = {
-  test: {
-    tunnelip: "129.213.57.168",
-    tunnelhost: "fuji.avax.ga",
-    prefix: "https://domains.fuji.avax.ga/",
-    host: "https://api.avax-test.network/ext/bc/C/rpc",
-    contract: "0xA133510258B8fdf5CcFe7d26aBFeF2D0f93497Bb",
-  },
-  fuji: {
-    tunnelip: "129.213.57.168",
-    tunnelhost: "fuji.avax.ga",
-    prefix: "https://domains.fuji.avax.ga/",
-    host: "https://api.avax-test.network/ext/bc/C/rpc",
-    contract: "0xA133510258B8fdf5CcFe7d26aBFeF2D0f93497Bb",
-  },
   fujiavax: {
     tunnelip: "129.213.57.168",
     tunnelhost: "fujiavax.ga",
@@ -36,6 +23,7 @@ const nets = {
     contract: "0xc290698f5E5CdbF881d804f68ceb5b76Ada383Be",
   },
 };
+
 const overrides = {
   "www.avax.ga": [
     {
@@ -101,37 +89,39 @@ const overrides = {
       ttl: 3600,
     },
   ],
+  "fujiavax.ga": [
+    {
+      type: 1,
+      address: "129.213.57.168",
+      name: "fujiavax.ga",
+      class: 1,
+      ttl: 3600,
+    },
+  ],
 };
 
 const handle = async (request, send, rinfo) => {
   const response = Packet.createResponseFromRequest(request);
   const [question] = request.questions;
-
-  const { name } = question;
+  let { name } = question;
+  name = name.toLowerCase();
   let outname = name.split(".");
   let net = nets["avax"];
 
-  if (
-    outname.length > 2 &&
-    Object.keys(nets).includes(outname[outname.length - 3])
-  ) {
-    net = nets[outname[outname.length - 3]];
-    outname.pop();
+  if (!nets[outname[outname.length - 2]]) {
+    return send(response);
   }
-  if (
-    outname.length > 1 &&
-    Object.keys(nets).includes(outname[outname.length - 2])
-  ) {
-    net = nets[outname[outname.length - 2]];
-  }
-
-  outname.pop();
-  outname.pop();
-  outname = outname.pop();
+  net = nets[outname[outname.length - 2]];
+  outname = outname[outname.length - 3];
+  if(question.type == Packet.TYPE.AAAA) return send(response);
   if (overrides[question.name.toLowerCase()]) {
     response.answers = overrides[question.name.toLowerCase()];
   } else {
-    if (!outname) return send(response);
+    if (!outname) {
+
+      console.log("sending early", question);
+      return send(response);
+    }
     let pendingLookup = pending[name];
     if (!pendingLookup) {
       pendingLookup = lookup(outname.toLowerCase(), question, net.host, net);
@@ -139,15 +129,25 @@ const handle = async (request, send, rinfo) => {
     }
     let lookedup = await pendingLookup;
     delete pending[name];
-    if (!lookedup) return send(response);
-    if (lookedup.answers)
-      for (let answer of lookedup.answers) response.answers.push(answer);
-    if (lookedup.authorities)
-      for (let authority of lookedup.authorities)
+    if (!lookedup) {
+      console.log("no lookup sending early", question);
+      return send(response);
+    }
+    if (lookedup.answers) {
+      for (let answer of lookedup.answers) {
+        response.answers.push(answer);
+      }
+    }
+    if (lookedup.authorities) {
+      for (let authority of lookedup.authorities) {
         response.authorities.push(authority);
-    if (!lookedup.authorities) response.header.aa = 1;
+      }
+    }
   }
-  console.log(JSON.stringify(response, null, 2));
+  if (!response.authorities.length) {
+    response.header.aa = 1;
+  }
+  console.log(JSON.stringify(response.answers, null, 2));
   send(response);
 };
 
