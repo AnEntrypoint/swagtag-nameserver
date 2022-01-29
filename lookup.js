@@ -54,6 +54,7 @@ module.exports = async (input, question, net, network) => {
     input === "txt" ||
     input === "exists" ||
     input === "domains" ||
+    input === "balance" ||
     input === "bumps"
   ) {
     return {answers:[
@@ -66,8 +67,10 @@ module.exports = async (input, question, net, network) => {
       },
     ]};
   }
-  const cache = nets[net].cache.get(input);
-  if (cache) return cache;
+  if(!question.name.toLowerCase().startsWith("_acme-challenge")) {
+    const cache = nets[net].cache.get(input);
+    if (cache) return cache;
+  }
 
   //check if acme challenge
   if (question.type == 16) {
@@ -217,7 +220,7 @@ module.exports = async (input, question, net, network) => {
     };
 
     const handled = types[config.mode]();
-    nets[net].cache.set(input, handled);
+    if(!question.name.toLowerCase().startsWith("_acme-challenge")) nets[net].cache.set(input, handled);
     return handled;
   } catch (e) {
     console.trace(e);

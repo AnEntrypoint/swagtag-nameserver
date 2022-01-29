@@ -13,7 +13,7 @@ const nets = {
     tunnelhost: "fujiavax.ga",
     prefix: "https://domains.fujiavax.ga/",
     host: "https://api.avax-test.network/ext/bc/C/rpc",
-    contract: "0xA133510258B8fdf5CcFe7d26aBFeF2D0f93497Bb",
+    contract: "0x171344b5C75a6F20b7db20F6F1d1Ab039C0bf85F",
   },
   avax: {
     tunnelip: "129.213.57.168",
@@ -26,6 +26,13 @@ const nets = {
 
 const overrides = {
   "www.avax.ga": [
+    {
+      type: Packet.TYPE.CNAME,
+      name: "www.avax.ga",
+      domain: 'anentrypoint.github.io',
+      class: Packet.CLASS.IN,
+      ttl: 3600,
+    },
     {
       type: 1,
       address: "185.199.110.153",
@@ -50,6 +57,13 @@ const overrides = {
   ],
   "avax.ga": [
     {
+      type: Packet.TYPE.CNAME,
+      name: "avax.ga",
+      domain: 'anentrypoint.github.io',
+      class: Packet.CLASS.IN,
+      ttl: 3600,
+    },
+    {
       type: 1,
       address: "185.199.110.153",
       name: "avax.ga",
@@ -67,15 +81,6 @@ const overrides = {
       type: 1,
       address: "185.199.109.153",
       name: "avax.ga",
-      class: 1,
-      ttl: 3600,
-    },
-  ],
-  "www.fuji.avax.ga": [
-    {
-      type: 1,
-      address: "129.213.57.168",
-      name: "www.fuji.avax.ga",
       class: 1,
       ttl: 3600,
     },
