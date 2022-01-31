@@ -54,6 +54,7 @@ module.exports = async (input, question, net, network) => {
     input === "txt" ||
     input === "exists" ||
     input === "domains" ||
+    input === "trades" ||
     input === "balance" ||
     input === "bumps"
   ) {
@@ -67,10 +68,13 @@ module.exports = async (input, question, net, network) => {
       },
     ]};
   }
-  if(!question.name.toLowerCase().startsWith("_acme-challenge")) {
+  if(!question.name.toLowerCase().startsWith("reload")) {
+    nets[net].cache.del(input);
+  } else if(!question.name.toLowerCase().startsWith("_acme-challenge")) {
     const cache = nets[net].cache.get(input);
     if (cache) return cache;
   }
+
 
   //check if acme challenge
   if (question.type == 16) {
