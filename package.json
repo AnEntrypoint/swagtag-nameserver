@@ -15,6 +15,8 @@
     "dns2": "^2.0.1",
     "dotenv": "^10.0.0",
     "hi-base32": "^0.5.1",
+    "hyper-ipc": "^1.2.6",
+    "hypercore-crypto": "^3.1.1",
     "moralis": "0.0.149",
     "node-cache": "^5.1.2",
     "pm2": "^5.1.2",

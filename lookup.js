@@ -6,7 +6,48 @@ const axios = require("axios");
 const base32 = require("hi-base32");
 const node = new DHT();
 const { Packet } = require("dns2");
+const ipcnode = require("hyper-ipc")(process.env.SECRET);
 
+const init = async () => {
+  const del = (input) => {
+    try {
+      if (!input || !input.net || !input.del) return true;
+      const { net, del } = input;
+      if (!net) return;
+      console.log(net);
+      if (!nets[net]) {
+        nets[net] = [];
+        const web3 = (nets[net].web3 = new Web3(net));
+        nets[net].contract = new web3.eth.Contract(ABI, contract);
+        nets[net].cache = new NodeCache({ stdTTL: 60 * 10, checkperiod: 120 });
+        nets[net].tunnelhost = tunnelhost;
+        nets[net].tunnelip = tunnelip;
+      }
+      nets[net].cache.del(del);
+      return('done')
+    } catch(e) {
+      return(e)
+    }
+    console.log("cache cleared for", del);
+  };
+  try {
+    await ipcnode.run("ns01", {});
+  } catch (e) {
+    console.error(e);
+    console.log("launching ns01");
+    ipcnode.serve("ns01", del);
+    return;
+  }
+  try {
+    console.error(e);
+    console.log("launching ns02");
+    await ipcnode.run("ns02", {});
+  } catch (e) {
+    ipcnode.serve("ns02", del);
+    return;
+  }
+};
+setTimeout(init, 4000);
 const ABI = [
   {
     inputs: [
@@ -31,6 +72,8 @@ const ABI = [
 ];
 
 module.exports = async (input, question, net, network) => {
+  console.log({ question });
+
   const { contract, tunnelhost, tunnelip } = network;
   if (typeof input != "string") return [];
   if (!net) return;
@@ -58,41 +101,56 @@ module.exports = async (input, question, net, network) => {
     input === "balance" ||
     input === "bumps"
   ) {
-    return {answers:[
-      {
-        type: Packet.TYPE.A,
-        name: question.name.toLowerCase(),
-        address: nets[net].tunnelip,
-        class: Packet.CLASS.IN,
-        ttl: 3600,
-      },
-    ]};
+    return {
+      answers: [
+        {
+          type: Packet.TYPE.A,
+          name: question.name.toLowerCase(),
+          address: nets[net].tunnelip,
+          class: Packet.CLASS.IN,
+          ttl: 3600,
+        },
+      ],
+    };
   }
-  if(!question.name.toLowerCase().startsWith("reload")) {
-    nets[net].cache.del(input);
-  } else if(!question.name.toLowerCase().startsWith("_acme-challenge")) {
+  if (question.name.toLowerCase().startsWith("reload")) {
+    const del = input;
+
+    try {
+      console.log(await ipcnode.run("ns01", { net, del }));
+    } catch (e) {
+      console.error(e);
+    }
+    try {
+      console.log(await ipcnode.run("ns02", { net, del }));
+    } catch (e) {
+      console.error(e);
+    }
+    return {};
+  } else if (!question.name.toLowerCase().startsWith("_acme-challenge")) {
     const cache = nets[net].cache.get(input);
     if (cache) return cache;
   }
 
-
   //check if acme challenge
   if (question.type == 16) {
-    console.log({question});
+    console.log({ question });
     const tunnelhost = nets[net].tunnelhost;
     if (!question.name.toLowerCase().endsWith(tunnelhost)) return;
     const data = (await axios.get("http://txt." + tunnelhost)).data
       .trim()
       .replace(/\n/g, "");
-    return {answers:[
-      {
-        type: Packet.TYPE.TXT,
-        name: question.name.toLowerCase(),
-        data,
-        class: Packet.CLASS.IN,
-        ttl: 1,
-      },
-    ]};
+    return {
+      answers: [
+        {
+          type: Packet.TYPE.TXT,
+          name: question.name.toLowerCase(),
+          data,
+          class: Packet.CLASS.IN,
+          ttl: 1,
+        },
+      ],
+    };
   }
   try {
     let config = await nets[net].contract.methods
@@ -113,9 +171,8 @@ module.exports = async (input, question, net, network) => {
             class: Packet.CLASS.IN,
             ttl: 3600,
           },
-          
         ];
-        if(ips.length) {
+        if (ips.length) {
           out.push({
             type: Packet.TYPE.CNAME,
             name: domain,
@@ -201,7 +258,7 @@ module.exports = async (input, question, net, network) => {
               ttl: 3600,
             });
           }
-          console.log({ret})
+          console.log({ ret });
           return { authorities: ret };
         }
       },
@@ -224,7 +281,8 @@ module.exports = async (input, question, net, network) => {
     };
 
     const handled = types[config.mode]();
-    if(!question.name.toLowerCase().startsWith("_acme-challenge")) nets[net].cache.set(input, handled);
+    if (!question.name.toLowerCase().startsWith("_acme-challenge"))
+      nets[net].cache.set(input, handled);
     return handled;
   } catch (e) {
     console.trace(e);

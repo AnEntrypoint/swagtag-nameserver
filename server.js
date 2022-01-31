@@ -11,6 +11,7 @@ const nets = {
   fujiavax: {
     tunnelip: "129.213.57.168",
     tunnelhost: "fujiavax.ga",
+    name:"fujiavax",
     prefix: "https://domains.fujiavax.ga/",
     host: "https://api.avax-test.network/ext/bc/C/rpc",
     contract: "0x171344b5C75a6F20b7db20F6F1d1Ab039C0bf85F",
@@ -18,6 +19,7 @@ const nets = {
   avax: {
     tunnelip: "129.213.57.168",
     tunnelhost: "avax.ga",
+    name:"avax",
     prefix: "https://domains.avax.ga/",
     host: "https://api.avax.network/ext/bc/C/rpc",
     contract: "0xD78b1732aBc4A25C17824Ea9510D7a66a4a09A75",
