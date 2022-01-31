@@ -20,7 +20,7 @@ const nets = {
     tunnelhost: "avax.ga",
     prefix: "https://domains.avax.ga/",
     host: "https://api.avax.network/ext/bc/C/rpc",
-    contract: "0xc290698f5E5CdbF881d804f68ceb5b76Ada383Be",
+    contract: "0xD78b1732aBc4A25C17824Ea9510D7a66a4a09A75",
   },
 };
 
@@ -90,6 +90,24 @@ const overrides = {
       type: 1,
       address: "129.213.57.168",
       name: "www.fujiavax.ga",
+      class: 1,
+      ttl: 3600,
+    },
+  ],
+  "bumps.avax.ga": [
+    {
+      type: 1,
+      address: "129.213.57.168",
+      name: "bumps.avax.ga",
+      class: 1,
+      ttl: 3600,
+    },
+  ],
+  "trades.avax.ga": [
+    {
+      type: 1,
+      address: "129.213.57.168",
+      name: "trades.avax.ga",
       class: 1,
       ttl: 3600,
     },
